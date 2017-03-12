@@ -67,7 +67,7 @@ for i in range(0, n_users):
             average[m] = np.mean(tmp[m])
         else:
             average[m] = 0
-    print average
+    #print average
     utility_clustered.append(average)
 
 utility_clustered = np.array(utility_clustered)
@@ -117,9 +117,10 @@ userCluster.fit_predict(userData)
 for i in range(n_users):
 	userCluster.labels_[i]
 
-print len(userCluster.labels_)
+#print len(userCluster.labels_)
 
 pcs_matrix = np.zeros((n_users, n_users))
+s=time.time()
 for i in range(0, n_users):
     for j in range(0, n_users):
     	if userCluster.labels_[i]!=userCluster.labels_[j]:
@@ -131,9 +132,10 @@ for i in range(0, n_users):
             sys.stdout.flush()
             time.sleep(0.00005)
 print "\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, pcs_matrix[i][j])
-
+print time.time()-s
 """
 pcs_matrix = np.zeros((n_users, n_users))
+s=time.time()
 for i in range(0, n_users):
     for j in range(0, n_users):
         if i!=j:
@@ -142,10 +144,9 @@ for i in range(0, n_users):
             sys.stdout.flush()
             time.sleep(0.00005)
 print "\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, pcs_matrix[i][j])
+print time.time()-s
+#print pcs_matrix
 """
-
-print pcs_matrix
-
 # Guesses the ratings that user with id, user_id, might give to item with id, i_id.
 # We will consider the top_n similar users to do this.
 def norm():
@@ -166,7 +167,7 @@ def guess(user_id, i_id, top_n):
     temp = norm()
     temp = np.delete(temp, user_id-1, 0)
     top = [x for (y,x) in sorted(zip(similarity,temp), key=lambda pair: pair[0], reverse=True)]
-	    s = 0
+    s = 0
     c = 0
     for i in range(0, top_n):
         if top[i][i_id-1] != float('Inf'):

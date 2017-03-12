@@ -54,22 +54,28 @@ movie_genre = np.array(movie_genre)
 cluster = KMeans(n_clusters=19)
 cluster.fit_predict(movie_genre)
 
-ask = random.sample(item, 10)
+ask = random.sample(item, 100)
 new_user = np.zeros(19)
 
-print "Please rate the following movies (1-5):"
+print "Please rate the following movies (1-5):\nFill in 0 if you have not seen it:"
 
+k=0
 for movie in ask:
 	print movie.title + ": "
 	a = int(input())
+	if a==0:
+		continue
 	if new_user[cluster.labels_[movie.id - 1]] != 0:
 		new_user[cluster.labels_[movie.id - 1]] = (new_user[cluster.labels_[movie.id - 1]] + a) / 2
 	else:
 		new_user[cluster.labels_[movie.id - 1]] = a
+	k=k+1
+	if k==10:
+		break
 
 utility_new = np.vstack((utility_matrix, new_user))
 
-user.append(User(944, 21, 'M', 'student', 110018))
+user.append(User(944, 21, 'M', 'student', 575025))
 
 pcs_matrix = np.zeros(n_users)
 
@@ -99,7 +105,6 @@ for i in range(0, 5):
 	top_5_genre.append(maxi)
 
 print "Movie genres you'd like:"
-
 for i in top_5_genre:
 	if i == 0:
 		print "unknown"
@@ -139,3 +144,32 @@ for i in top_5_genre:
 		print "war"
 	else:
 		print "western"
+
+enc=[]
+for i in range(20):
+	flag=False
+	for j in top_5_genre:
+		if i==j:
+			flag=True
+			break
+	if flag==True:
+		enc.append(1)
+	else:
+		enc.append(0)
+
+print enc
+loc=[]
+k=0
+for i in movie_genre:
+	c=0
+	for (a,b) in zip(enc,i):
+		if a==b:
+			c+=1
+	if c>20-len(set(top_5_genre)):
+		loc.append(k)
+	k=k+1
+
+print "Some recommendations : "
+print loc 
+for i in range(len(loc)):
+	print loc[i], item[loc[i]].title, movie_genre[loc[i]]
