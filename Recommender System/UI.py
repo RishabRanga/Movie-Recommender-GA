@@ -9,6 +9,7 @@ import pickle
 import random
 import sys
 import time
+import os.path
 
 user = []
 item = []
@@ -55,29 +56,40 @@ cluster = KMeans(n_clusters=19)
 cluster.fit_predict(movie_genre)
 
 ask = random.sample(item, 100)
-new_user = np.zeros(19)
 
+username=raw_input("Enter username")
+if (os.path.exists(username+".pkl")):
+	print "Old User"
+	flag=True
+	o=pickle.load(open(username+".pkl","rb"))
+	avg_ratings=o.avg_ratings
+	demographics=o.demographics
+	pcs_matrix=o.pcs
+else:	
+	print "New User"
+	flag=False
+	avg_ratings = np.zeros(19)
+	demographics= User(944, 21, 'M', 'student', 575025)
+	pcs_matrix = np.zeros(n_users)
+	
 print "Please rate the following movies (1-5):\nFill in 0 if you have not seen it:"
-
 k=0
 for movie in ask:
 	print movie.title + ": "
 	a = int(input())
 	if a==0:
 		continue
-	if new_user[cluster.labels_[movie.id - 1]] != 0:
-		new_user[cluster.labels_[movie.id - 1]] = (new_user[cluster.labels_[movie.id - 1]] + a) / 2
+	if avg_ratings[cluster.labels_[movie.id - 1]] != 0:
+		avg_ratings[cluster.labels_[movie.id - 1]] = (avg_ratings[cluster.labels_[movie.id - 1]] + a) / 2
 	else:
-		new_user[cluster.labels_[movie.id - 1]] = a
+		avg_ratings[cluster.labels_[movie.id - 1]] = a
 	k=k+1
 	if k==10:
 		break
 
-utility_new = np.vstack((utility_matrix, new_user))
+utility_new = np.vstack((utility_matrix, avg_ratings))
 
-user.append(User(944, 21, 'M', 'student', 575025))
-
-pcs_matrix = np.zeros(n_users)
+user.append(demographics)
 
 print "Finding users which have similar preferences."
 for i in range(0, n_users + 1):
@@ -173,3 +185,6 @@ print "Some recommendations : "
 print loc 
 for i in range(len(loc)):
 	print loc[i], item[loc[i]].title, movie_genre[loc[i]]
+
+obj=NewUser(username, avg_ratings, demographics, pcs_matrix)
+pickle.dump(obj, open(username+".pkl", "wb"))
