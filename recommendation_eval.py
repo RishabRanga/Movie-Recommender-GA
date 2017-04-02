@@ -5,15 +5,23 @@ from movielens import *
 
 import sys
 import time
-import math
-import re
+import copy
 import pickle
 
 import numpy as np
 
+from ga_movie import GA_model
 from sklearn.cluster import KMeans
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
+
+class Chromosome(list):
+    def __init__(self, *args):
+        list.__init__(self, *args)
+        self.uid = None
+    def setUID(self, uid):
+        self.uid = uid
+
 
 # Store data in arrays
 user = []
@@ -85,6 +93,21 @@ def pcs(x, y):
     den2 = 0
     A = utility_clustered[x - 1]
     B = utility_clustered[y - 1]
+    num = sum((a - user[x - 1].avg_r) * (b - user[y - 1].avg_r) for a, b in zip(A, B) if a > 0 and b > 0)
+    den1 = sum((a - user[x - 1].avg_r) ** 2 for a in A if a > 0)
+    den2 = sum((b - user[y - 1].avg_r) ** 2 for b in B if b > 0)
+    den = (den1 ** 0.5) * (den2 ** 0.5)
+    if den == 0:
+        return 0
+    else:
+        return num / den
+
+def pcs_utility(x, y, ut, user):
+    num = 0
+    den1 = 0
+    den2 = 0
+    A = ut[x - 1]
+    B = ut[y - 1]
     num = sum((a - user[x - 1].avg_r) * (b - user[y - 1].avg_r) for a, b in zip(A, B) if a > 0 and b > 0)
     den1 = sum((a - user[x - 1].avg_r) ** 2 for a in A if a > 0)
     den2 = sum((b - user[y - 1].avg_r) ** 2 for b in B if b > 0)
@@ -205,5 +228,125 @@ for i in range(0, n_users):
             y_true.append(test[i][j])
             y_pred.append(utility_copy[i][cluster.labels_[j]-1])
 f.close()
-
 print "Mean Squared Error: %f" % mean_squared_error(y_true, y_pred)
+
+
+selected_users = []
+SIZE_OF_POPULATION = 10
+number_of_selected_users = 0
+for i in user:
+    if userCluster.labels_[i.id] == 0:
+        selected_users.append(i)
+        number_of_selected_users += 1
+    if number_of_selected_users >= SIZE_OF_POPULATION:
+        break
+
+population = []
+for selected_user in selected_users:
+    print "The user we dealing with is:" + str(selected_user.id)
+    pcs_list = []
+    for i in range(0, n_users):
+        if i != selected_user.id:
+            pcs_list.append(pcs_utility(selected_user.id, i + 1, utility_copy, user))
+    user_index = []
+    for i in user:
+        user_index.append(i.id - 1)
+    del user_index[selected_user.id]
+    user_index = np.array(user_index)
+
+    top_5 = [x for (y, x) in sorted(zip(pcs_list, user_index), key=lambda pair: pair[0], reverse=True)]
+    top_5 = top_5[:5]
+
+    top_5_cluster = []
+    for i in range(0, 5):
+        maxi = 0
+        maxe = 0
+        for j in range(0, 19):
+            if maxe < utility_copy[top_5[i]][j]:
+                maxe = utility_copy[top_5[i]][j]
+                maxi = j
+        top_5_cluster.append(maxi)
+    print top_5_cluster
+    k = 5
+
+    res = {}
+    for i in range(len(top_5_cluster)):
+        print top_5_cluster[i]
+        if top_5_cluster[i] not in res.keys():
+            res[top_5_cluster[i]] = len(top_5_cluster) - i
+        else:
+            res[top_5_cluster[i]] += len(top_5_cluster) - i
+
+    top_cluster = res.keys()[0]
+    print top_5
+    movies_in_top_cluster = []
+
+    for i in item:
+        if cluster.labels_[i.id - 1] == top_cluster:
+            movies_in_top_cluster.append(i)
+
+    movie_dict = {movie.id: [0, 0, 0, 0, 0] for movie in movies_in_top_cluster}
+    for movie in movies_in_top_cluster:
+        for j in rating:
+            if j.user_id in top_5 and j.item_id == movie.id:
+                movie_dict[movie.id][j.rating - 1] += 1
+
+    recommended_movies = None
+    movie_sums = []
+    for movie in movie_dict:
+        total = 0
+        for i, j in zip(range(0, 5), movie_dict[movie]):
+            total += i * j
+        movie_sums.append(total)
+    recommended_movies = sorted(zip(movie_dict.keys(), movie_sums), key=lambda x: x[1], reverse=True)
+    # print recommended_movies[:5]
+
+    chromosome = Chromosome()
+    for i in item:
+        if i.id in [recommended_movies[k][0] for k in range(5)]:
+            chromosome.append(i)
+    chromosome.setUID(selected_user.id)
+    population.append(chromosome)
+
+
+m = GA_model(population, 0.1, 0.1, len(item))
+m.compute_fitness(utility_copy, cluster)
+
+for i in range(50):
+    if i == 0:
+        temp = copy.deepcopy(m)
+    else:
+        if (sum(temp.fitness) / float(len(temp.fitness))) >= (sum(m.fitness) / float(len(m.fitness))):
+            m = copy.deepcopy(temp)
+        else:
+            temp = copy.deepcopy(m)
+
+    m.roulette_selection()
+    m.cross_over()
+    m.mutation()
+    m.compute_fitness(utility_copy, cluster)
+
+maximum_fit = max(m.fitness)
+
+print m.population
+
+# for i in range(len(m.fitness)):
+#     if m.fitness[i] == maximum_fit:
+#         print (m.fitness[i], m.population[i])
+
+
+"""
+TODO:
+# 1. Iterate through users to get `S` users from a cluster
+2. Compute generes he might like
+3. Do GA on it till convergence for the population with fitness of accuracy and diversity
+
+A-metric:
+    Ideally, the user will love our recommendations and rate it all 5
+    So, as a measure of a-mteric we guess how much the user will like it, ie to guess the ratings
+    See, this guessing is a part of our recomendation engine, so is GA.
+     So, it is alright to use this metric as we are interested in multiobjective optimisation not in evaluating the system
+
+    To evaluate the system we should use some other metrics
+
+"""

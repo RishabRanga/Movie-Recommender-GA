@@ -57,8 +57,10 @@ for movie in item:
                         movie.musical, movie.mystery, movie.romance, movie.sci_fi, movie.thriller, movie.war, movie.western])
 
 movie_genre = np.array(movie_genre)
-cluster = KMeans(n_clusters=19)
-cluster.fit_predict(movie_genre)
+# cluster = KMeans(n_clusters=19)
+# cluster.fit_predict(movie_genre)
+with open("cluster.pkl","w") as fp:
+    cluster=pickle.load(fp)
 
 ask = random.sample(item, 10)
 new_user = np.zeros(19)
