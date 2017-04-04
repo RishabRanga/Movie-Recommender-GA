@@ -10,17 +10,13 @@ import pickle
 
 import numpy as np
 
-from ga_movie import GA_model
+from ga_movie import GA_model, Chromosome
 from sklearn.cluster import KMeans
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
 
-class Chromosome(list):
-    def __init__(self, *args):
-        list.__init__(self, *args)
-        self.uid = None
-    def setUID(self, uid):
-        self.uid = uid
+SIZE_OF_POPULATION = 50
+CHROMOSOME_SIZE = 10
 
 
 # Store data in arrays
@@ -232,10 +228,9 @@ print "Mean Squared Error: %f" % mean_squared_error(y_true, y_pred)
 
 
 selected_users = []
-SIZE_OF_POPULATION = 10
 number_of_selected_users = 0
 for i in user:
-    if userCluster.labels_[i.id] == 0:
+    if userCluster.labels_[i.id-1] == 0:
         selected_users.append(i)
         number_of_selected_users += 1
     if number_of_selected_users >= SIZE_OF_POPULATION:
@@ -251,7 +246,7 @@ for selected_user in selected_users:
     user_index = []
     for i in user:
         user_index.append(i.id - 1)
-    del user_index[selected_user.id]
+    del user_index[selected_user.id - 1]
     user_index = np.array(user_index)
 
     top_5 = [x for (y, x) in sorted(zip(pcs_list, user_index), key=lambda pair: pair[0], reverse=True)]
@@ -271,14 +266,12 @@ for selected_user in selected_users:
 
     res = {}
     for i in range(len(top_5_cluster)):
-        print top_5_cluster[i]
         if top_5_cluster[i] not in res.keys():
             res[top_5_cluster[i]] = len(top_5_cluster) - i
         else:
             res[top_5_cluster[i]] += len(top_5_cluster) - i
 
     top_cluster = res.keys()[0]
-    print top_5
     movies_in_top_cluster = []
 
     for i in item:
@@ -295,15 +288,14 @@ for selected_user in selected_users:
     movie_sums = []
     for movie in movie_dict:
         total = 0
-        for i, j in zip(range(0, 5), movie_dict[movie]):
+        for i, j in zip(range(0, CHROMOSOME_SIZE), movie_dict[movie]):
             total += i * j
         movie_sums.append(total)
     recommended_movies = sorted(zip(movie_dict.keys(), movie_sums), key=lambda x: x[1], reverse=True)
-    # print recommended_movies[:5]
 
     chromosome = Chromosome()
     for i in item:
-        if i.id in [recommended_movies[k][0] for k in range(5)]:
+        if i.id in [recommended_movies[k][0] for k in range(CHROMOSOME_SIZE)]:
             chromosome.append(i)
     chromosome.setUID(selected_user.id)
     population.append(chromosome)
@@ -325,25 +317,41 @@ for i in range(50):
     m.cross_over()
     m.mutation()
     m.compute_fitness(utility_copy, cluster)
+    print m.fitness
 
 maximum_fit = max(m.fitness)
 
-print m.population
+for idx, fit in enumerate(m.fitness):
+    if fit == maximum_fit:
+        break
+best_fit_chromosome = population[idx]
+
+print "Evaluating...",
+for movie in best_fit_chromosome:
+    avg = []
+    for r in rating:
+        if userCluster.labels_[r.user_id-1] == 0 and movie.id==r.item_id:
+            avg.append(r.rating)
+    average_rating = 0
+    if not avg:
+        average_rating = 0
+    else:
+        average_rating = sum(avg)/float(len(avg))
+    print movie.title, avg
+print "done"
 
 # for i in range(len(m.fitness)):
 #     if m.fitness[i] == maximum_fit:
 #         print (m.fitness[i], m.population[i])
 
-
 """
-TODO:
 # 1. Iterate through users to get `S` users from a cluster
 2. Compute generes he might like
 3. Do GA on it till convergence for the population with fitness of accuracy and diversity
 
 A-metric:
     Ideally, the user will love our recommendations and rate it all 5
-    So, as a measure of a-mteric we guess how much the user will like it, ie to guess the ratings
+    So, as a measure of a-metric we guess how much the user will like it, ie to guess the ratings
     See, this guessing is a part of our recomendation engine, so is GA.
      So, it is alright to use this metric as we are interested in multiobjective optimisation not in evaluating the system
 
