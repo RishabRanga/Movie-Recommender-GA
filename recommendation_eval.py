@@ -1,16 +1,16 @@
 """
-Clustering and stuff
+Clustering
 """
 from movielens import *
+from ga_movie import GA_model, Chromosome
 
+import csv
 import sys
 import time
 import copy
 import pickle
 
 import numpy as np
-
-from ga_movie import GA_model, Chromosome
 from sklearn.cluster import KMeans
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
@@ -81,9 +81,11 @@ utility_clustered = np.array(utility_clustered)
 for i in range(0, n_users):
     x = utility_clustered[i]
     user[i].avg_r = sum(a for a in x if a > 0) / sum(a > 0 for a in x)
+    user[i].min_r = min(x)
+    user[i].max_r = max(x)
 
 # Find the Pearson Correlation Similarity Measure between two users
-def pcs(x, y):
+def similarity(x, y):
     num = 0
     den1 = 0
     den2 = 0
@@ -98,7 +100,7 @@ def pcs(x, y):
     else:
         return num / den
 
-def pcs_utility(x, y, ut, user):
+def similarity_utility(x, y, ut, user):
     num = 0
     den1 = 0
     den2 = 0
@@ -117,11 +119,11 @@ userData=[]
 for i in user:
     userData.append([i.id, i.sex, i.age, i.occupation, i.zip])
 
-le=LabelEncoder()
+le = LabelEncoder()
 le.fit([a[3] for a in userData])
-le2=LabelEncoder()
+le2 = LabelEncoder()
 le2.fit([a[1] for a in userData])
-le3=LabelEncoder()
+le3 = LabelEncoder()
 le3.fit([a[4] for a in userData])
 
 userData=[]
@@ -137,34 +139,20 @@ for i in range(n_users):
 
 #print len(userCluster.labels_)
 
-pcs_matrix = np.zeros((n_users, n_users))
-s=time.time()
+similarity_matrix = np.zeros((n_users, n_users))
+s = time.time()
 for i in range(0, n_users):
     for j in range(0, n_users):
         if userCluster.labels_[i]!=userCluster.labels_[j]:
-            pcs_matrix[i][j]=0
+            similarity_matrix[i][j]=0
             continue
-        if i!=j:
-            pcs_matrix[i][j] = pcs(i + 1, j + 1)
-            sys.stdout.write("\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, pcs_matrix[i][j]))
+        if i != j:
+            similarity_matrix[i][j] = similarity(i + 1, j + 1)
+            sys.stdout.write("\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, similarity_matrix[i][j]))
             sys.stdout.flush()
             time.sleep(0.00005)
-print "\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, pcs_matrix[i][j])
-print time.time()-s
-"""
-pcs_matrix = np.zeros((n_users, n_users))
-s=time.time()
-for i in range(0, n_users):
-    for j in range(0, n_users):
-        if i!=j:
-            pcs_matrix[i][j] = pcs(i + 1, j + 1)
-            sys.stdout.write("\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, pcs_matrix[i][j]))
-            sys.stdout.flush()
-            time.sleep(0.00005)
-print "\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, pcs_matrix[i][j])
-print time.time()-s
-#print pcs_matrix
-"""
+print "\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, similarity_matrix[i][j])
+# print time.time()-s
 # Guesses the ratings that user with id, user_id, might give to item with id, i_id.
 # We will consider the top_n similar users to do this.
 def norm():
@@ -181,7 +169,7 @@ def guess(user_id, i_id, top_n):
     similarity = []
     for i in range(0, n_users):
         if i+1 != user_id:
-            similarity.append(pcs_matrix[user_id-1][i])
+            similarity.append(similarity_matrix[user_id-1][i])
     temp = norm()
     temp = np.delete(temp, user_id-1, 0)
     top = [x for (y,x) in sorted(zip(similarity,temp), key=lambda pair: pair[0], reverse=True)]
@@ -209,7 +197,7 @@ for i in range(0, n_users):
             utility_copy[i][j] = guess(i+1, j+1, 150)
 print "\rGuessing [User:Rating] = [%d:%d]" % (i, j)
 
-print utility_copy
+# print utility_copy
 # Utility matrix is an n_users x n_movie_clusters(hybrid genres) matrix where utility_matrix[i][j] = average rating of user i to hybrid genre j
 pickle.dump( utility_copy, open("utility_matrix.pkl", "wb"))
 
@@ -239,17 +227,17 @@ for i in user:
 population = []
 for selected_user in selected_users:
     print "The user we dealing with is:" + str(selected_user.id)
-    pcs_list = []
+    similarity_list = []
     for i in range(0, n_users):
         if i != selected_user.id:
-            pcs_list.append(pcs_utility(selected_user.id, i + 1, utility_copy, user))
+            similarity_list.append(similarity_utility(selected_user.id, i + 1, utility_copy, user))
     user_index = []
     for i in user:
         user_index.append(i.id - 1)
     del user_index[selected_user.id - 1]
     user_index = np.array(user_index)
 
-    top_5 = [x for (y, x) in sorted(zip(pcs_list, user_index), key=lambda pair: pair[0], reverse=True)]
+    top_5 = [x for (y, x) in sorted(zip(similarity_list, user_index), key=lambda pair: pair[0], reverse=True)]
     top_5 = top_5[:5]
 
     top_5_cluster = []
@@ -320,29 +308,31 @@ for i in range(50):
     print m.fitness
 
 maximum_fit = max(m.fitness)
-
 for idx, fit in enumerate(m.fitness):
     if fit == maximum_fit:
         break
 best_fit_chromosome = population[idx]
 
-print "Evaluating...",
+print "Evaluating..."
 for movie in best_fit_chromosome:
     avg = []
     for r in rating:
-        if userCluster.labels_[r.user_id-1] == 0 and movie.id==r.item_id:
-            avg.append(r.rating)
+        if userCluster.labels_[r.user_id-1] == 0 and movie.id == r.item_id:
+            avg.append(((float(r.rating) - user[r.user_id-1].min_r)/(user[r.user_id-1].max_r - user[r.user_id-1].min_r))*4.0 + 1.0 )
+
     average_rating = 0
     if not avg:
         average_rating = 0
     else:
         average_rating = sum(avg)/float(len(avg))
-    print movie.title, avg
-print "done"
 
-# for i in range(len(m.fitness)):
-#     if m.fitness[i] == maximum_fit:
-#         print (m.fitness[i], m.population[i])
+    with open("recommendation_res.txt", "a") as fp:
+        csvfile = csv.writer(fp)
+        temp = [movie.id, movie.title, average_rating, len(avg)]
+        temp.extend(avg)
+        csvfile.writerow(temp)
+    print movie.id, movie.title, len(avg), avg, average_rating
+
 
 """
 # 1. Iterate through users to get `S` users from a cluster

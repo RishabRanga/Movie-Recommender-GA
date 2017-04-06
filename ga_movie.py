@@ -46,7 +46,7 @@ class GA_model(object):
         self.movie_genre = get_movie_genres()
 
 
-    def fitness_fun(self, chromosome, utility_matrix, cluster, d_weight=0.3, a_weight=0.7):
+    def fitness_fun(self, chromosome, utility_matrix, cluster, d_weight=0.75, a_weight=0.25):
         """
         Calculate the fitness of each chromosome
         :param chromosome:
@@ -69,7 +69,6 @@ class GA_model(object):
         d_score = n_different_movie_genres / float(19)
 
         # Weighted score
-        print a_score,d_score
         score = (a_weight*(a_score) + d_weight*(d_score)) / ( 2 * (a_weight+d_weight) )
 
         return score
