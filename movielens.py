@@ -86,10 +86,11 @@ class Dataset:
             if len(e) == 4:
                 r.append(Rating(e[0], e[1], e[2], e[3]))
         f.close()
-        
+
 class NewUser:
-    def __init__(self, username, avg_ratings, demographics, pcs):
+    def __init__(self, username, avg_ratings, demographics, pcs, recommendations=[]):
     	self.username=username
     	self.avg_ratings=avg_ratings
     	self.demographics=demographics
     	self.pcs=pcs
+        self.recommendations=recommendations

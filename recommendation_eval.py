@@ -131,7 +131,7 @@ for i in user:
     userData.append([i.id, int(le2.transform([i.sex])), i.age, int(le.transform([i.occupation])), int(le3.transform([i.zip]))])
 
 
-userCluster = KMeans(n_clusters=4)
+userCluster = KMeans(n_clusters=6)
 userCluster.fit_predict(userData)
 
 for i in range(n_users):
@@ -249,7 +249,8 @@ for selected_user in selected_users:
                 maxe = utility_copy[top_5[i]][j]
                 maxi = j
         top_5_cluster.append(maxi)
-    print top_5_cluster
+    # print top_5_cluster
+
     k = 5
 
     res = {}
@@ -288,11 +289,15 @@ for selected_user in selected_users:
     chromosome.setUID(selected_user.id)
     population.append(chromosome)
 
+a = 0.75
+d = 0.25
+g = 50
+c = 0.1
+m = 0.1
+m = GA_model(population, c, m, len(item))
+m.compute_fitness(utility_copy, cluster, a, d)
 
-m = GA_model(population, 0.1, 0.1, len(item))
-m.compute_fitness(utility_copy, cluster)
-
-for i in range(50):
+for i in range(g):
     if i == 0:
         temp = copy.deepcopy(m)
     else:
@@ -304,8 +309,8 @@ for i in range(50):
     m.roulette_selection()
     m.cross_over()
     m.mutation()
-    m.compute_fitness(utility_copy, cluster)
-    print m.fitness
+    m.compute_fitness(utility_copy, cluster, a, d)
+    # print m.fitness
 
 maximum_fit = max(m.fitness)
 for idx, fit in enumerate(m.fitness):
@@ -326,7 +331,7 @@ for movie in best_fit_chromosome:
     else:
         average_rating = sum(avg)/float(len(avg))
 
-    with open("recommendation_res.txt", "a") as fp:
+    with open("recommendation_userCluster.txt", "a") as fp:
         csvfile = csv.writer(fp)
         temp = [movie.id, movie.title, average_rating, len(avg)]
         temp.extend(avg)
