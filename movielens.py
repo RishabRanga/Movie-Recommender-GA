@@ -12,6 +12,8 @@ class User:
         self.occupation = occupation
         self.zip = zip
         self.avg_r = 0.0
+        self.min_r = 6
+        self.max_r = 0
 
 # Read data/README to get more info on these data structures
 class Item:

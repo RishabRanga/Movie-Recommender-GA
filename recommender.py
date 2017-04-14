@@ -13,6 +13,7 @@ import numpy as np
 
 from sklearn.cluster import KMeans
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import LabelEncoder
 
 # Store data in arrays
 user = []
@@ -36,7 +37,6 @@ utility = np.zeros((n_users, n_items))
 for r in rating:
     utility[r.user_id - 1][r.item_id - 1] = r.rating
 
-print utility
 
 test = np.zeros((n_users, n_items))
 for r in rating_test:
@@ -52,6 +52,8 @@ for movie in item:
 movie_genre = np.array(movie_genre)
 cluster = KMeans(n_clusters=19)
 cluster.fit_predict(movie_genre)
+with open("cluster.pkl", "w") as fp:
+    pickle.dump(cluster, fp)
 
 utility_clustered = []
 for i in range(0, n_users):
@@ -67,7 +69,6 @@ for i in range(0, n_users):
             average[m] = np.mean(tmp[m])
         else:
             average[m] = 0
-    #print average
     utility_clustered.append(average)
 
 utility_clustered = np.array(utility_clustered)
@@ -93,11 +94,9 @@ def pcs(x, y):
     else:
         return num / den
 
-from sklearn.preprocessing import LabelEncoder
-
 userData=[]
 for i in user:
-	userData.append([i.id, i.sex, i.age, i.occupation, i.zip])
+    userData.append([i.id, i.sex, i.age, i.occupation, i.zip])
 
 le=LabelEncoder()
 le.fit([a[3] for a in userData])
@@ -108,14 +107,14 @@ le3.fit([a[4] for a in userData])
 
 userData=[]
 for i in user:
-	userData.append([i.id, int(le2.transform([i.sex])), i.age, int(le.transform([i.occupation])), int(le3.transform([i.zip]))])
+    userData.append([i.id, int(le2.transform([i.sex])), i.age, int(le.transform([i.occupation])), int(le3.transform([i.zip]))])
 
 
 userCluster = KMeans(n_clusters=4)
 userCluster.fit_predict(userData)
 
 for i in range(n_users):
-	userCluster.labels_[i]
+    userCluster.labels_[i]
 
 #print len(userCluster.labels_)
 
@@ -123,9 +122,9 @@ pcs_matrix = np.zeros((n_users, n_users))
 s=time.time()
 for i in range(0, n_users):
     for j in range(0, n_users):
-    	if userCluster.labels_[i]!=userCluster.labels_[j]:
-    		pcs_matrix[i][j]=0
-    		continue
+        if userCluster.labels_[i]!=userCluster.labels_[j]:
+            pcs_matrix[i][j]=0
+            continue
         if i!=j:
             pcs_matrix[i][j] = pcs(i + 1, j + 1)
             sys.stdout.write("\rGenerating Similarity Matrix [%d:%d] = %f" % (i+1, j+1, pcs_matrix[i][j]))
@@ -192,7 +191,7 @@ for i in range(0, n_users):
 print "\rGuessing [User:Rating] = [%d:%d]" % (i, j)
 
 print utility_copy
-
+# Utility matrix is an n_users x n_movie_clusters(hybrid genres) matrix where utility_matrix[i][j] = average rating of user i to hybrid genre j
 pickle.dump( utility_copy, open("utility_matrix.pkl", "wb"))
 
 # Predict ratings for u.test and find the mean squared error
