@@ -46,7 +46,7 @@ class GA_model(object):
         self.movie_genre = get_movie_genres()
 
 
-    def fitness_fun(self, chromosome, utility_matrix, cluster, d_weight=0.75, a_weight=0.25):
+    def fitness_fun(self, chromosome, utility_matrix, cluster, a_weight=0.6, d_weight=0.4):
         """
         Calculate the fitness of each chromosome
         :param chromosome:
@@ -74,7 +74,7 @@ class GA_model(object):
         return score
 
 
-    def compute_fitness(self, utility_matrix, cluster):
+    def compute_fitness(self, utility_matrix, cluster, a_weight, d_weight):
         """
 
         :param utility_matrix:
@@ -82,7 +82,7 @@ class GA_model(object):
         :return:
         """
         for i in range(self.pop_size):
-            self.fitness[i] = self.fitness_fun(self.population[i], utility_matrix, cluster)
+            self.fitness[i] = self.fitness_fun(self.population[i], utility_matrix, cluster, a_weight, d_weight)
 
         if max(self.fitness) == 1:
             print "Done, features are - ", self.population[self.fitness.index(min(self.fitness))]
