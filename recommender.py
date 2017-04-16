@@ -42,6 +42,11 @@ test = np.zeros((n_users, n_items))
 for r in rating_test:
     test[r.user_id - 1][r.item_id - 1] = r.rating
 
+avg_ratings = np.asarray(utility).mean(0)
+# print avg_ratings
+with open("avg_rating.pkl", "w") as fp:
+    pickle.dump(avg_ratings, fp)
+
 # Perform clustering on items
 movie_genre = []
 for movie in item:
