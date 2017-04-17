@@ -162,7 +162,12 @@ def rate_recomm(utility_matrix, avg_ratings, demographics, pcs_matrix, recommend
         r = input("Enter your rating\n")
         if r>3.5:
             c+=1
-        avg_ratings[cluster.labels_[i.id - 1]] = (avg_ratings[cluster.labels_[i.id - 1]] + r) / 2
+
+        # Update the average rating to include information abour latest preference
+        # Alpha determines relative importance
+        alpha = 0.5
+        avg_ratings[cluster.labels_[i.id - 1]] = ((1-alpha) * avg_ratings[cluster.labels_[i.id - 1]] + alpha * r)
+        
     print "Precision of predictions : ",c/5.0
     for i in range(0, n_users):
         if i!=943:
