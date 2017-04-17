@@ -60,6 +60,12 @@ def pop_movies(movies, movie_clusters):
 	return random.sample(top_movies, 100)
 
 
+def update_recommendations(stored_rating, new_rating, alpha):
+	# Update the average rating to include information abour latest preference
+    # Alpha determines relative importance
+	updated_rating = (alpha-1) * stored_rating + alpha * new_rating
+	return updated_rating
+
 def recomm_main(utility_matrix, avg_ratings, demographics, pcs_matrix):
     user, item, movie_genre, ratings = load_from_dataset(utility_matrix)
     n_users = len(user)
@@ -78,7 +84,8 @@ def recomm_main(utility_matrix, avg_ratings, demographics, pcs_matrix):
         if a==0:
             continue
         if avg_ratings[cluster.labels_[movie.id - 1]] != 0:
-            avg_ratings[cluster.labels_[movie.id - 1]] = (avg_ratings[cluster.labels_[movie.id - 1]] + a) / 2
+            # avg_ratings[cluster.labels_[movie.id - 1]] = (avg_ratings[cluster.labels_[movie.id - 1]] + a) / 2
+            avg_ratings[cluster.labels_[movie.id - 1]] = update_recommendations(avg_ratings[cluster.labels_[movie.id - 1]], a, 0.5)
         else:
             avg_ratings[cluster.labels_[movie.id - 1]] = a
         k = k+1
@@ -162,7 +169,9 @@ def rate_recomm(utility_matrix, avg_ratings, demographics, pcs_matrix, recommend
         r = input("Enter your rating\n")
         if r>3.5:
             c+=1
-        avg_ratings[cluster.labels_[i.id - 1]] = (avg_ratings[cluster.labels_[i.id - 1]] + r) / 2
+
+        avg_ratings[cluster.labels_[i.id - 1]] = update_recommendations(avg_rating[cluster.labels_[i.id - 1]], r, 0.5)
+
     print "Precision of predictions : ",c/5.0
     for i in range(0, n_users):
         if i!=943:
