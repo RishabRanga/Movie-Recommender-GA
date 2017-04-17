@@ -7,6 +7,7 @@ import random
 import os.path
 
 NO_OF_RECOMMENDATIONS = 10
+RECIPROCAL_RANKING_THRESHOLD = 3
 
 def load_from_dataset(utility_matrix):
     user = []
@@ -54,7 +55,7 @@ def pop_movies(movies, movie_clusters):
 		avg_rating = pickle.load(fp)
 
 	for movie, rating, cluster in zip(movies, avg_rating, movie_clusters.labels_):
-		
+
 		# Threshold for average is low due to sparse dataset
 		if rating > 0.1:
 			top_movies.append(movie)
@@ -76,7 +77,7 @@ def recomm_main(utility_matrix, avg_ratings, demographics, pcs_matrix):
         cluster = pickle.load(fp)
 
     ask = pop_movies(item, cluster)
-    
+
     print "Please rate the following movies (1-5):\nFill in 0 if you have not seen it:"
     k=0
     for movie in ask:
@@ -165,20 +166,33 @@ def rate_recomm(utility_matrix, avg_ratings, demographics, pcs_matrix, recommend
     n_users = len(user)
     n_items = len(item)
     c = 0
+    rel_idx = -1
+    idx = 1
+    pending_recom=[]
     for i in recommendations:
         print i.title
-        r = input("Enter your rating\n")
+        r = input("Enter your rating, if you've not seen the movie provide 0\n")
+        if r==0:
+            pending_recom.append(i)
+            continue
         if r>3.5:
             c+=1
+            if rel_idx == -1:
+                rel_idx = idx
+        avg_ratings[cluster.labels_[i.id - 1]] = (avg_ratings[cluster.labels_[i.id - 1]] + r) / 2
+        idx += 1
+    reciprocal_ranking = 0
 
-        avg_ratings[cluster.labels_[i.id - 1]] = update_recommendations(avg_rating[cluster.labels_[i.id - 1]], r, 0.5)
+    if rel_idx <= RECIPROCAL_RANKING_THRESHOLD and rel_idx != -1:
+        reciprocal_ranking = 1.0/(rel_idx)
 
-    print "Precision of predictions : ",c/5.0
+    print "Precision of predictions : ",c/float(len(recommendations))
+    print "Reciprocal Ranking : ", reciprocal_ranking
     for i in range(0, n_users):
         if i!=943:
             utility_new = np.vstack((utility_matrix, avg_ratings))
             pcs_matrix[i] = pcs(944, i + 1, utility_new, user)
-    return avg_ratings, pcs_matrix
+    return avg_ratings, pcs_matrix, pending_recom
 
 def UI_main():
     username=raw_input("\nEnter username\n")
@@ -228,7 +242,12 @@ def UI_main():
         if int(ch)==1:
             avg_ratings, demographics, pcs_matrix, recommendations = recomm_main(utility_matrix, avg_ratings, demographics,pcs_matrix)
         elif int(ch)==2:
-            avg_ratings, pcs_matrix = rate_recomm(utility_matrix, avg_ratings, demographics, pcs_matrix, recommendations)
+            if recommendations:
+                # avg_ratings, pcs_matrix = rate_recomm(utility_matrix, avg_ratings, demographics, pcs_matrix, recommendations)
+                avg_ratings, pcs_matrix, recommendations = rate_recomm(utility_matrix, avg_ratings, demographics, pcs_matrix, recommendations)
+
+            else:
+                print "Please get more recommendations"
         else:
             break
 
