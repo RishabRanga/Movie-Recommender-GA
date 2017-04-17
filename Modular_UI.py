@@ -44,6 +44,22 @@ def pcs(x, y, ut, user):
     else:
         return num / den
 
+
+def pop_movies(movies, movie_clusters):
+
+	top_movies = []
+
+	with open("avg_rating.pkl", "r") as fp:
+		avg_rating = pickle.load(fp)
+
+	for movie, rating, cluster in zip(movies, avg_rating, movie_clusters.labels_):
+		
+		# Threshold for average is low due to sparse dataset
+		if rating > 0.1:
+			top_movies.append(movie)
+	return random.sample(top_movies, 100)
+
+
 def recomm_main(utility_matrix, avg_ratings, demographics, pcs_matrix):
     user, item, movie_genre, ratings = load_from_dataset(utility_matrix)
     n_users = len(user)
@@ -52,8 +68,8 @@ def recomm_main(utility_matrix, avg_ratings, demographics, pcs_matrix):
     with open("cluster.pkl", "r") as fp:
         cluster = pickle.load(fp)
 
-    ask = random.sample(item, 100)
-
+    ask = pop_movies(item, cluster)
+    
     print "Please rate the following movies (1-5):\nFill in 0 if you have not seen it:"
     k=0
     for movie in ask:
