@@ -5,7 +5,7 @@ import re
 
 # Read data/README to get more info on these data structures
 class User:
-    def __init__(self, id, age, sex, occupation, zip):
+    def __init__(self, id, age, occupation, zip, sex='M'):
         self.id = int(id)
         self.age = int(age)
         self.sex = sex

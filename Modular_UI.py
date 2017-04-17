@@ -2,6 +2,7 @@ from movielens import *
 
 import numpy as np
 import pickle
+import easygui
 import random
 import os.path
 
@@ -192,8 +193,33 @@ def UI_main():
     else:
         print "New User"
         flag=False
+        age = input("Enter your age: ")
+        gender = raw_input("M/F: ")
+        pin = input("Enter pincode: ")
+        profession = easygui.choicebox(msg="Select your profession",choices=["administrator",
+"artist",
+"doctor",
+"educator",
+"engineer",
+"entertainment",
+"executive",
+"healthcare",
+"homemaker",
+"lawyer",
+"librarian",
+"marketing",
+"none",
+"other",
+"programmer",
+"retired",
+"salesman",
+"scientist",
+"student",
+"technician",
+"writer",]
+)
         avg_ratings = np.zeros(19)
-        demographics= User(944, 21, 'M', 'student', 575025)
+        demographics= User(944, age,  profession, pin, gender)
         pcs_matrix = np.zeros(943)
         recommendations=[]
     utility_matrix = pickle.load(open("utility_matrix.pkl", "rb"))
